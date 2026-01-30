@@ -24,12 +24,75 @@ export default function JobsPage() {
 
   const [pageLimit, setPageLimit] = useState(1);
   const [currentProgress, setCurrentProgress] = useState(0);
+
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  // Load from localStorage on mount
+  useEffect(() => {
+    const savedKeywords = localStorage.getItem('excludedKeywords');
+    if (savedKeywords) {
+      try {
+        setExcludedKeywords(JSON.parse(savedKeywords));
+      } catch (e) {
+        console.error('Failed to parse saved keywords', e);
+      }
+    }
+
+    const savedLimit = localStorage.getItem('pageLimit');
+    if (savedLimit) {
+      setPageLimit(parseInt(savedLimit) || 1);
+    }
+
+    const savedSearch = localStorage.getItem('search');
+    if (savedSearch) {
+      setSearch(savedSearch);
+    }
+
+    const savedCategory = localStorage.getItem('selectedCategory');
+    if (savedCategory) {
+      setSelectedCategory(savedCategory);
+    }
+
+    const savedArea = localStorage.getItem('selectedArea');
+    if (savedArea) {
+      setSelectedArea(savedArea);
+    }
+
+    setIsLoaded(true);
+  }, []);
+
+  // Save to localStorage when specific states change
+  useEffect(() => {
+    if (!isLoaded) return;
+    localStorage.setItem('excludedKeywords', JSON.stringify(excludedKeywords));
+  }, [excludedKeywords, isLoaded]);
+
+  useEffect(() => {
+    if (!isLoaded) return;
+    localStorage.setItem('pageLimit', pageLimit.toString());
+  }, [pageLimit, isLoaded]);
+
+  useEffect(() => {
+    if (!isLoaded) return;
+    localStorage.setItem('search', search);
+  }, [search, isLoaded]);
+
+  useEffect(() => {
+    if (!isLoaded) return;
+    localStorage.setItem('selectedCategory', selectedCategory);
+  }, [selectedCategory, isLoaded]);
+
+  useEffect(() => {
+    if (!isLoaded) return;
+    localStorage.setItem('selectedArea', selectedArea);
+  }, [selectedArea, isLoaded]);
   
   // Refs to handle race conditions and cancellations
   const abortControllerRef = useRef<AbortController | null>(null);
   const fetchCounterRef = useRef(0);
 
   const fetchJobs = async () => {
+    if (!isLoaded && typeof window !== 'undefined') return; // Don't fetch until state is loaded from localStorage
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
@@ -80,14 +143,15 @@ export default function JobsPage() {
   };
 
   useEffect(() => {
-    // Initial fetch
-    fetchJobs();
+    if (isLoaded) {
+      fetchJobs();
+    }
     return () => {
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
     };
-  }, []);
+  }, [isLoaded]);
 
   const categories = useMemo(() => ['All', ...new Set(jobs.map(j => j.category).filter(Boolean))], [jobs]);
   const areas = useMemo(() => ['All', ...new Set(jobs.map(j => j.area).filter(Boolean))], [jobs]);
@@ -171,6 +235,15 @@ export default function JobsPage() {
               <p className="text-xs italic text-muted-foreground/50">No keywords excluded yet.</p>
             )}
           </div>
+          
+          {excludedKeywords.length > 0 && (
+            <button 
+              onClick={() => setExcludedKeywords([])}
+              className="text-[10px] text-muted-foreground hover:text-red-500 uppercase font-bold tracking-tighter transition-colors"
+            >
+              Clear All Keywords
+            </button>
+          )}
         </div>
 
         <div className="mt-auto pt-6 border-t border-border">
