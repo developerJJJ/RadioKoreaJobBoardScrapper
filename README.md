@@ -17,7 +17,7 @@
 ```bash
 cd backend
 npm install
-node server.js
+npm run dev
 ```
 
 ### Frontend (Next.js Dashboard)
